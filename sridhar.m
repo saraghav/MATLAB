@@ -5,7 +5,7 @@ clear; close all; clc;
 % data_set_dir = '.'; % for final submission
 % data_set_id = ''; % for final submission
 data_set_dir = 'my_data_sets';
-data_set_id = '4';
+data_set_id = '3';
 files = {'X', 'Y', 'n'};
 for file_index=1:length(files)
     file = files{file_index};
@@ -29,6 +29,7 @@ manhattan_distance_to_competitors = abs(x_distance_to_competitors) + abs(y_dista
 customer_to_competition = min(manhattan_distance_to_competitors, [], 2); % min along each row
 
 max_distance_bound = 400;
+min_distance_bound = 1e-4 * min(customer_to_competition);
 
 %% calculate the locations of our shops as a MILP
 
@@ -96,7 +97,7 @@ for j=1:N
         % constraint 5: d_xij + d_yij + (max_distance_bound -
         %           customer_to_competition)*c_ij <= max_distance_bound
         c_index = constraint_set_offset(5) + c_id;
-        A(c_index, [2*n+(j-1)*n+i, 2*n+N*n+(j-1)*n+i, 2*n+2*N*n+(j-1)*n+i]) = [1, 1, max_distance_bound-customer_to_competition(j)];
+        A(c_index, [2*n+(j-1)*n+i, 2*n+N*n+(j-1)*n+i, 2*n+2*N*n+(j-1)*n+i]) = [1, 1, max_distance_bound-customer_to_competition(j)+min_distance_bound];
         b(c_index) = max_distance_bound;
     end
     
