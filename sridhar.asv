@@ -50,7 +50,7 @@ num_pairwise_constraint_types = 5;
 num_customer_specific_constraint_types = 1;
 num_pairwise_constraints = num_pairwise_constraint_types*N*n;
 num_customer_specific_constraints = num_customer_specific_constraint_types*N;
-num_constraints = num_pairwise_constraints + num_customer_specific_constraints;
+num_constraints = num_pairwise_;
 
 % variable types and variable bounds
 intcon = 2*n+2*N*n + (1:N*n); % offset + range of c_ij s
@@ -99,11 +99,6 @@ for j=1:N
         A(c_index, [2*n+(j-1)*n+i, 2*n+N*n+(j-1)*n+i, 2*n+2*N*n+(j-1)*n+i]) = [1, 1, max_distance_bound-customer_to_competition(j)];
         b(c_index) = max_distance_bound;
     end
-    
-    % constraint 6: SUM c_ij <= 1 (no more than one shop services customer)
-    c_index = num_pairwise_constraints + j;
-    A(c_index, 2*n+2*N*n+(j-1)*n+(1:n)) = ones(1,n);
-    b(c_index) = 1;
 end
 
 % equality constraints
