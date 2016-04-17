@@ -5,7 +5,7 @@ clear; close all; clc;
 % data_set_dir = '.'; % for final submission
 % data_set_id = ''; % for final submission
 data_set_dir = 'my_data_sets';
-data_set_id = '1';
+data_set_id = '2';
 files = {'X', 'Y', 'n'};
 for file_index=1:length(files)
     file = files{file_index};
@@ -122,6 +122,8 @@ milp_options.CutGenMaxIter = 25;
 milp_options.CutGeneration = 'intermediate';
 milp_options.IPPreprocess = 'advanced';
 milp_options.TolGapRel = 1e-15;
+milp_options.HeuristicsMaxNodes = 100;
+milp_options.Heuristics = 'rins';
 
 tic
 [x,fval,exitflag,output] = intlinprog(f,intcon,A,b,Aeq,beq,lb,ub, milp_options);
