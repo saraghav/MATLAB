@@ -5,7 +5,7 @@ clear; close all; clc;
 % data_set_dir = '.'; % for final submission
 % data_set_id = ''; % for final submission
 data_set_dir = 'my_data_sets';
-data_set_id = '3';
+data_set_id = '1';
 files = {'X', 'Y', 'n'};
 for file_index=1:length(files)
     file = files{file_index};
@@ -114,13 +114,14 @@ beq = [];
 % cost function
 f = zeros(num_variables, 1);
 f(intcon) = -1;
+f(2*n+(1:2*N*n)) = 1e-5;
 
 %% solve the MILP
 milp_options = optimoptions('intlinprog');
-% milp_options.CutGenMaxIter = 25;
-% milp_options.CutGeneration = 'intermediate';
-% milp_options.IPPreprocess = 'advanced';
-% milp_options.TolGapRel = 1e-15;
+milp_options.CutGenMaxIter = 25;
+milp_options.CutGeneration = 'intermediate';
+milp_options.IPPreprocess = 'advanced';
+milp_options.TolGapRel = 1e-15;
 
 tic
 [x,fval,exitflag,output] = intlinprog(f,intcon,A,b,Aeq,beq,lb,ub, milp_options);
