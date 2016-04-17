@@ -8,3 +8,4 @@ difference = customer_to_my_shops - customer_to_competition;
 
 summary = horzcat(X, customer_to_competition, customer_to_my_shops, difference);
 disp(summary);
+fprintf('%e\n', summary(:,end));
