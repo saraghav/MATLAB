@@ -5,7 +5,7 @@ clear; close all; clc;
 % data_set_dir = '.'; % for final submission
 % data_set_id = ''; % for final submission
 data_set_dir = 'my_data_sets';
-data_set_id = '2';
+data_set_id = '4';
 files = {'X', 'Y', 'n'};
 for file_index=1:length(files)
     file = files{file_index};
@@ -102,9 +102,9 @@ for j=1:N
     end
     
     % constraint 6: SUM c_ij <= 1 (no more than one shop services customer)
-%     c_index = num_pairwise_constraints + j;
-%     A(c_index, 2*n+2*N*n+(j-1)*n+(1:n)) = ones(1,n);
-%     b(c_index) = 1;
+    c_index = num_pairwise_constraints + j;
+    A(c_index, 2*n+2*N*n+(j-1)*n+(1:n)) = ones(1,n);
+    b(c_index) = 1;
 end
 
 % equality constraints
@@ -112,67 +112,27 @@ Aeq = [];
 beq = [];
 
 % cost function
-f = zeros(num_variables, 1);
-f(intcon) = -1;
-% f(2*n+(1:2*N*n)) = 1e-5;
-
-%% iterate over an LP to get better results
-lp_options = optimoptions('linprog');
-
-var_offset = 2*n+2*N*n;
-var_unint_attempts_id = zeros(size(intcon));
-max_lp_attempts = 10;
-Aeq_iter = Aeq;
-beq_iter = beq;
-for lp_iter = 1:max_lp_attempts
-    [x,fval,exitflag,output] = linprog(f,A,b,Aeq_iter,beq_iter,lb,ub,[],lp_options);
-    
-    if exitflag == 1
-        disp(strcat('Success! lp_iter = ', num2str(lp_iter)));
-        Aeq = Aeq_iter;
-        beq = beq_iter;
-        
-        % pick new variable to try
-        stop_lp_attempts = 1;
-        indices_to_check = find( abs(x(intcon)-1) < 1e-5 );
-        for check_index = 1:length(indices_to_check)
-            next_var_index = indices_to_check(check_index);
-            if var_unint_attempts_id(next_var_index) ~= 1
-                var_unint_attempts_id(next_var_index) = 1;
-                stop_lp_attempts = 0;
-                break;
-            end
-        end
-        if stop_lp_attempts == 1
-            disp('Stopping LP attempts. No variable to un-integerize');
-            break;
-        end
-        
-        new_constraint_row = zeros(1,num_variables);
-        new_constraint_row(next_var_index) = 1;
-    
-        Aeq_iter = [Aeq_iter ; new_constraint_row];
-        beq_iter = [beq_iter ; 1];
-    else
-        Aeq_iter = Aeq;
-        beq_iter = beq;
-    end
-end
-
-return;
+C = zeros(num_variables, num_variables);
+d = zeros(num_variables, 1);
+C(2*n+2*N*n+(1:N*n), 2*n+2*N*n+(1:N*n)) = speye(N*n);
+d(2*n+2*N*n+(1:N*n)) = ones(N*n,1);
 
 %% solve the MILP
-milp_options = optimoptions('intlinprog');
-milp_options.CutGenMaxIter = 25;
-milp_options.CutGeneration = 'intermediate';
-milp_options.IPPreprocess = 'advanced';
-milp_options.TolGapRel = 1e-15;
-milp_options.HeuristicsMaxNodes = 100;
-milp_options.Heuristics = 'rins';
-milp_options.MaxTime = 10*60; % 10 minutes
+lsqlin_options = optimoptions('lsqlin');
+lsqlin_options.Algorithm = 'active-set';
+lsqlin_options.MaxIter = 100000;
+
+x0 = [];
+% x0 = [
+%     Y(:,1) ;
+%     Y(:,2) ;
+%     reshape(x_distance_to_competitors, [N*n,1]) ;
+%     reshape(y_distance_to_competitors, [N*n,1]) ;
+%     ones(N*n,1)
+% ];
 
 tic
-[x,fval,exitflag,output] = intlinprog(f,intcon,A,b,Aeq,beq,lb,ub,milp_options);
+[x,fval,exitflag,output] = lsqlin(C,d,A,b,Aeq,beq,lb,ub, x0, lsqlin_options);
 toc
 
 %% repurpose the output and plot the results
