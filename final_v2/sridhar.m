@@ -169,6 +169,7 @@ function [U_best, J_best] = line_search(X, Y, U_k, store, search_settings)
         if sum(lost_customers > 0)
             X_lost = X(lost_customers, :);
             n = size(U_k, 1);
+            n = min(n, size(X_lost,1));
             [~, X_centers] = kmeans(X_lost, n, 'Distance', 'cityblock');
             choices = randi(n, 1, 2);
             use_cardinal_directions = 0;
