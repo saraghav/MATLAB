@@ -1,12 +1,14 @@
 % perturbation based approach
 function sridhar
     warning('off','stats:kmeans:FailedToConverge');
-    tic_main = tic;
+%     tic_main = tic;
     % load data
     load X; load Y; load n;
 
+    U_star_dummy = [];
     N = size(X,1);
     if n > N
+        U_star_dummy = zeros(n-N, 2);
         n = N;
     end
     
@@ -25,14 +27,19 @@ function sridhar
         [U_star, J_star] = perturb(X, Y, n, max_iterations);
     end
     
+    U_star = [U_star ; U_star_dummy]; % if n>N fills with (0,0) for extra stores
+    
     assignin('base','U_star',U_star);
     assignin('base','J_star',J_star);
     assignin('base','X',X);
     assignin('base','Y',Y);
     assignin('base','n',n);
     
-    toc_main = toc(tic_main);
-    disp( strcat('Runtime = ', num2str(round(toc_main), ' %d'), ' s' ));
+%     toc_main = toc(tic_main);
+%     disp( strcat('Runtime = ', num2str(round(toc_main), ' %d'), ' s' ));
+    
+    U_star
+    J_star
 end
 
 function U_0 = find_initial_guess_2(X,Y,n)
@@ -73,17 +80,28 @@ function [U_best, J_best] = perturb(X, Y, n, max_iterations)
     tic_perturb = tic;
     timeout = 0;
     
+    search_settings = struct;
+    search_settings.interval_type = 1;
+    search_settings.max_iterations = 20;
+    search_settings.contract_depth = 2;
+    
     for iter=1:max_iterations
         U_km1 = U_k;
         for store=1:n
-            [U_k, J_k] = line_search(X, Y, U_k, store);
-            if toc(tic_perturb)*(1+1/iter) >= 900
+            [U_k, J_k] = line_search(X, Y, U_k, store, search_settings);
+            if toc(tic_perturb)*(1+1/iter) >= 890
                 timeout = 1;
                 break;
             end
         end
         if U_km1 == U_k
-            break;
+            if search_settings.interval_type == 4
+                % exhausted three different types
+                break;
+            else
+                search_settings.interval_type = search_settings.interval_type + 1;
+                search_settings.contract_depth = 3;
+            end
         end
         if timeout == 1
             break;
@@ -98,17 +116,27 @@ function [U_best, J_best] = perturb(X, Y, n, max_iterations)
     U_k = find_initial_guess_4(X,Y,n);
     J_k = calculate_J(X, Y, U_k);
     
+    search_settings.interval_type = 1;
+    search_settings.max_iterations = 20;
+    search_settings.contract_depth = 2;
+    
     for iter=1:max_iterations
         U_km1 = U_k;
         for store=1:n
-            [U_k, J_k] = line_search(X, Y, U_k, store);
-            if toc(tic_perturb)*(1+1/(iter_so_far+iter)) >= 900
+            [U_k, J_k] = line_search(X, Y, U_k, store, search_settings);
+            if toc(tic_perturb)*(1+1/(iter_so_far+iter)) >= 890
                 timeout = 1;
                 break;
             end
         end
         if U_km1 == U_k
-            break;
+            if search_settings.interval_type == 4
+                % exhausted three different types
+                break;
+            else
+                search_settings.interval_type = search_settings.interval_type + 1;
+                search_settings.contract_depth = 3;
+            end
         end
         if timeout == 1
             break;
@@ -121,11 +149,48 @@ function [U_best, J_best] = perturb(X, Y, n, max_iterations)
     end
 end
 
-function [U_best, J_best] = line_search(X, Y, U_k, store)
-    max_iterations = 10;
+function [U_best, J_best] = line_search(X, Y, U_k, store, search_settings)
     store_location = U_k(store, :);
     
-    [x_range_all_pairs, y_range_all_pairs] = generate_all_pairs(store_location, [0 0], [100 100]);
+    persistent Y_shortest_distance;
+    Y_shortest_distance = [];
+    if isempty(Y_shortest_distance)
+        [Y_shortest_distance, ~, ~] = assign_customer_to_store(X, Y);
+    end
+    
+    if search_settings.interval_type == 1 || search_settings.interval_type > 4
+        % default method
+        use_cardinal_directions = 1;
+        [x_range_all_pairs, y_range_all_pairs] = generate_all_pairs(store_location, [0 0], [100 100], use_cardinal_directions);
+    elseif search_settings.interval_type == 3
+        % use k-means on uncontrolled data set
+        [U_shortest_distance, ~, ~] = assign_customer_to_store(X, U_k);
+        lost_customers = U_shortest_distance >= Y_shortest_distance;
+        if sum(lost_customers > 0)
+            X_lost = X(lost_customers, :);
+            n = size(U_k, 1);
+            [~, X_centers] = kmeans(X_lost, n, 'Distance', 'cityblock');
+            choices = randi(n, 1, 2);
+            use_cardinal_directions = 0;
+            [x_range_all_pairs, y_range_all_pairs] = generate_all_pairs(store_location, X_centers(choices(1),:), X_centers(choices(2),:), use_cardinal_directions);
+        else
+            U_best = U_k;
+            J_best = calculate_J(X, Y, U_k);
+            return;
+        end
+    elseif search_settings.interval_type == 2
+        % diagonal only, shorter span
+        low_coord = max( max(store_location)-30 , 0 );
+        high_coord = min( max(store_location)+30 , 0 );
+        use_cardinal_directions = 1;
+        [x_range_all_pairs, y_range_all_pairs] = generate_all_pairs(store_location, [low_coord low_coord], [high_coord high_coord], use_cardinal_directions);
+    elseif search_settings.interval_type == 4
+        % diagonal only, even shorter span
+        low_coord = max( max(store_location)-5 , 0 );
+        high_coord = min( max(store_location)+5 , 0 );
+        use_cardinal_directions = 0;
+        [x_range_all_pairs, y_range_all_pairs] = generate_all_pairs(store_location, [low_coord low_coord], [high_coord high_coord], use_cardinal_directions);
+    end
     n_ranges = size(x_range_all_pairs,1);
     U_list = cell(n_ranges,1);
     J_list = zeros(n_ranges,1);
@@ -133,7 +198,7 @@ function [U_best, J_best] = line_search(X, Y, U_k, store)
     for range = 1:n_ranges
         x_range = x_range_all_pairs(range,:);
         y_range = y_range_all_pairs(range,:);
-        [U_list{range}, J_list(range)] = contracting_search(X, Y, U_k, store, x_range, y_range, max_iterations);
+        [U_list{range}, J_list(range)] = contracting_search(X, Y, U_k, store, x_range, y_range, search_settings);
     end
       
     % pick best
@@ -141,8 +206,8 @@ function [U_best, J_best] = line_search(X, Y, U_k, store)
     U_best = U_list{best_index};
 end
 
-function [x_range_all_pairs, y_range_all_pairs] = generate_all_pairs(coord, rect_ll, rect_ur)
-    if all( and((coord > rect_ll) , (coord < rect_ur) ) )
+function [x_range_all_pairs, y_range_all_pairs] = generate_all_pairs(coord, rect_ll, rect_ur, use_cardinal_directions)
+    if all( and((coord > rect_ll) , (coord < rect_ur) ) ) && use_cardinal_directions == 1
         x_range_all_pairs = [
             rect_ll(1) coord(1)   ; % W
             coord(1)   rect_ur(1) ; % E
@@ -179,8 +244,10 @@ function [x_range_all_pairs, y_range_all_pairs] = generate_all_pairs(coord, rect
     end
 end
 
-function [opt_U, opt_J] = contracting_search(X, Y, U_k, store, x, y, max_iterations)
-    contract_depth = 3;
+function [opt_U, opt_J] = contracting_search(X, Y, U_k, store, x, y, search_settings)
+    max_iterations = search_settings.max_iterations;
+    contract_depth = search_settings.contract_depth;
+    
     if length(x) == 2 && length(y) == 1
         x_grid = linspace(x(1), x(2), max_iterations);
         y_grid = y * ones(1,max_iterations);
