@@ -166,7 +166,7 @@ function [U_best, J_best] = line_search(X, Y, U_k, store, search_settings)
         % use k-means on uncontrolled data set
         [U_shortest_distance, ~, ~] = assign_customer_to_store(X, U_k);
         lost_customers = U_shortest_distance >= Y_shortest_distance;
-        if sum(lost_customers > 0)
+        if sum(lost_customers) > 1
             X_lost = X(lost_customers, :);
             n = size(U_k, 1);
             n = min(n, size(X_lost,1));
