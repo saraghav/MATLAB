@@ -23,7 +23,7 @@ function main
         U_star = [];
         J_star = 0;
     else
-        max_iterations = 100;
+        max_iterations = 50;
         [U_star, J_star] = perturb(X, Y, n, max_iterations);
     end
     
@@ -36,7 +36,7 @@ function main
     toc_main = toc(tic_main);
     toc_main
     
-    visualize(X,Y,U_star);
+    visualize2(X,Y,U_star);
 end
 
 function U_0 = find_initial_guess(X,Y,n)
@@ -115,102 +115,97 @@ function U_0 = find_initial_guess_4(X,~,n)
 end
 
 function [U_k, J_k] = perturb(X, Y, n, max_iterations)
-%     U_k = find_initial_guess(X,Y,n);
+    U_k = find_initial_guess(X,Y,n);
 %     U_k = find_initial_guess_2(X,Y,n);
 %     U_k = find_initial_guess_3(X,Y,n);
 %     U_k = find_initial_guess_4(X,Y,n);
     J_k = calculate_J(X, Y, U_k);
     
+    tic_perturb = tic;
+    timeout = 0;
+    
     for iter=1:max_iterations
         U_km1 = U_k;
         for store=1:n
             [U_k, J_k] = line_search(X, Y, U_k, store);
+            if toc(tic_perturb) >= 880
+                timeout = 1;
+                break;
+            end
         end
         if U_km1 == U_k
             disp('No more improvement');
             disp(iter);
             break;
         end
+        if timeout == 1
+            disp('Timed out');
+            break;
+        end
+        toc(tic_perturb)
     end
 end
 
 function [U_best, J_best] = line_search(X, Y, U_k, store)
-%     max_iterations = 100;
     max_iterations = 10;
     store_location = U_k(store, :);
     
-%     % x axis
-%     [U_opt_right, J_opt_right] = linear_search(X, Y, U_k, store, [store_location(1) 100], store_location(2), max_iterations);
-%     [U_opt_left, J_opt_left] = linear_search(X, Y, U_k, store, [0 store_location(1)], store_location(2), max_iterations);
-%     
-%     % y axis
-%     [U_opt_up, J_opt_up] = linear_search(X, Y, U_k, store, store_location(1), [store_location(2) 100], max_iterations);
-%     [U_opt_down, J_opt_down] = linear_search(X, Y, U_k, store, store_location(1), [0 store_location(2)], max_iterations);
-
-    % x axis
-    [U_opt_right, J_opt_right] = contracting_search(X, Y, U_k, store, [store_location(1) 100], store_location(2), max_iterations);
-    [U_opt_left, J_opt_left] = contracting_search(X, Y, U_k, store, [0 store_location(1)], store_location(2), max_iterations);
+    [x_range_all_pairs, y_range_all_pairs] = generate_all_pairs(store_location, [0 0], [100 100]);
+    n_ranges = size(x_range_all_pairs,1);
+    U_list = cell(n_ranges,1);
+    J_list = zeros(n_ranges,1);
     
-    % y axis
-    [U_opt_up, J_opt_up] = contracting_search(X, Y, U_k, store, store_location(1), [store_location(2) 100], max_iterations);
-    [U_opt_down, J_opt_down] = contracting_search(X, Y, U_k, store, store_location(1), [0 store_location(2)], max_iterations);
-    
-    % pick best
-    J_list = [J_opt_right, J_opt_left, J_opt_up, J_opt_down];
-    [J_best, best_index] = max(J_list);
-    if best_index == 1
-        U_best = U_opt_right;
-    elseif best_index == 2
-        U_best = U_opt_left;
-    elseif best_index == 3
-        U_best = U_opt_up;
-    elseif best_index == 4
-        U_best = U_opt_down;
+    for range = 1:n_ranges
+        x_range = x_range_all_pairs(range,:);
+        y_range = y_range_all_pairs(range,:);
+        [U_list{range}, J_list(range)] = contracting_search(X, Y, U_k, store, x_range, y_range, max_iterations);
     end
+      
+    % pick best
+    [J_best, best_index] = max(J_list);
+    U_best = U_list{best_index};
 end
 
-function [opt_U, opt_J] = linear_search(X, Y, U_k, store, x, y, max_iterations)
-    if length(x) == 2
-        % search along x
-        x_grid = linspace(x(1), x(2), max_iterations);
-        J_grid = zeros(size(x_grid));
-        parfor iter = 1:max_iterations
-            x_iter = x_grid(iter);
-            
-            new_coord = [x_iter y];
-            
-            U_temp = U_k;
-            U_temp(store,:) = new_coord;
-            
-            J_grid(iter) = calculate_J(X, Y, U_temp);
-        end
-        
-        [opt_J, max_index] = max(J_grid);
-        opt_U = U_k;
-        opt_U(store, 1) = x_grid(max_index);
+function [x_range_all_pairs, y_range_all_pairs] = generate_all_pairs(coord, rect_ll, rect_ur)
+    if all( and((coord > rect_ll) , (coord < rect_ur) ) )
+        x_range_all_pairs = [
+            rect_ll(1) coord(1)   ; % W
+            coord(1)   rect_ur(1) ; % E
+            coord(1)   coord(1)   ; % N
+            coord(1)   coord(1)   ; % S
+            rect_ll(1) coord(1)   ; % SW
+            rect_ll(1) coord(1)   ; % NW
+            coord(1)   rect_ur(1) ; % SE
+            coord(1)   rect_ur(1) ; % NE
+        ];
+        y_range_all_pairs = [
+            coord(2)   coord(2)   ; % W
+            coord(2)   coord(2)   ; % E
+            coord(2)   rect_ur(2) ; % N
+            rect_ll(2) coord(2)   ; % S
+            rect_ll(2) coord(2)   ; % SW
+            coord(2)   rect_ur(2) ; % NW
+            rect_ll(2) coord(2)   ; % SE
+            coord(2)   rect_ur(2) ; % NE
+        ];
     else
-        % search along y
-        y_grid = linspace(y(1), y(2), max_iterations);
-        J_grid = zeros(size(y_grid));
-        parfor iter = 1:max_iterations
-            y_iter = y_grid(iter);
-            
-            new_coord = [x y_iter];
-            
-            U_temp = U_k;
-            U_temp(store,:) = new_coord;
-            
-            J_grid(iter) = calculate_J(X, Y, U_temp);
-        end
-        
-        [opt_J, max_index] = max(J_grid);
-        opt_U = U_k;
-        opt_U(store, 2) = y_grid(max_index);
+        x_range_all_pairs = [
+            rect_ll(1) coord(1)   ; % SW
+            rect_ll(1) coord(1)   ; % NW
+            coord(1)   rect_ur(1) ; % SE
+            coord(1)   rect_ur(1) ; % NE
+        ];
+        y_range_all_pairs = [
+            rect_ll(2) coord(2)   ; % SW
+            coord(2)   rect_ur(2) ; % NW
+            rect_ll(2) coord(2)   ; % SE
+            coord(2)   rect_ur(2) ; % NE
+        ];
     end
 end
 
 function [opt_U, opt_J] = contracting_search(X, Y, U_k, store, x, y, max_iterations)
-    contract_depth = 3;
+    contract_depth = 2;
     if length(x) == 2 && length(y) == 1
         x_grid = linspace(x(1), x(2), max_iterations);
         y_grid = y * ones(1,max_iterations);
@@ -225,7 +220,7 @@ function [opt_U, opt_J] = contracting_search(X, Y, U_k, store, x, y, max_iterati
     J_grid = zeros(size(x_grid));
 
     for depth = 1:contract_depth
-        parfor iter=1:max_iterations
+        for iter=1:max_iterations
             x_iter = x_grid(iter);
             y_iter = y_grid(iter);
             

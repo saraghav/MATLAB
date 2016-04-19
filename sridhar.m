@@ -4,10 +4,10 @@ clear; close all; clc;
 % load data
 % data_set_dir = '.'; % for final submission
 % data_set_id = ''; % for final submission
-data_set_dir = 'my_data_sets';
-data_set_id = '4';
-% data_set_dir = 'prof_data_sets';
-% data_set_id = '1';
+% data_set_dir = 'my_data_sets';
+% data_set_id = '4';
+data_set_dir = 'prof_data_sets';
+data_set_id = '1';
 files = {'X', 'Y', 'n'};
 for file_index=1:length(files)
     file = files{file_index};
@@ -65,7 +65,7 @@ ub = [
 ];
 
 % inequality constraints
-A = zeros(num_constraints, num_variables);
+A = sparse(num_constraints, num_variables);
 b = zeros(num_constraints, 1);
 
 constraint_offset = N*n;
@@ -117,6 +117,8 @@ beq = [];
 f = zeros(num_variables, 1);
 f(intcon) = -1;
 f(2*n+(1:2*N*n)) = 1e-5;
+
+return;
 
 %% solve the MILP
 milp_options = optimoptions('intlinprog');
