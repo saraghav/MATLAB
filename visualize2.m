@@ -1,4 +1,4 @@
-function visualize(X,Y,U)
+function visualize2(X,Y,U)
     close all;
     
     [Y_shortest_distance, ~, ~] = assign_customer_to_store(X, Y);
