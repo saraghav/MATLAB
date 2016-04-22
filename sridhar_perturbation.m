@@ -2,10 +2,10 @@
 function sridhar_perturbation
     tic_main = tic;
     % load data
-    data_set_dir = 'my_data_sets';
-    data_set_id = '7';
-%     data_set_dir = 'prof_data_sets';
-%     data_set_id = '1';
+%     data_set_dir = 'my_data_sets';
+%     data_set_id = '7';
+    data_set_dir = 'prof_data_sets';
+    data_set_id = 'TEST_CASE_04';
     files = {'X', 'Y', 'n'};
     for file_index=1:length(files)
         file = files{file_index};
@@ -131,9 +131,9 @@ function [U_k, J_k] = perturb(X, Y, n, max_iterations)
         U_history = cell(n,1);
     end
 
-%     U_k = find_initial_guess(X,Y,n);
+    U_k = find_initial_guess(X,Y,n);
 %     U_k = find_initial_guess_2(X,Y,n);
-    U_k = find_initial_guess_3(X,Y,n);
+%     U_k = find_initial_guess_3(X,Y,n);
 %     U_k = find_initial_guess_4(X,Y,n);
     J_k = calculate_J(X, Y, U_k);
     
@@ -150,7 +150,7 @@ function [U_k, J_k] = perturb(X, Y, n, max_iterations)
         for store=1:n
             [U_k, J_k] = line_search(X, Y, U_k, store, search_settings);
             U_history{store,1}(iter,:) = U_k(store,:);
-            if toc(tic_perturb)*(1+1/iter) >= 890
+            if toc(tic_perturb)*(1+1/iter) >= 1800
                 timeout = 1;
                 break;
             end
@@ -162,6 +162,7 @@ function [U_k, J_k] = perturb(X, Y, n, max_iterations)
             else
                 search_settings.interval_type = search_settings.interval_type + 1;
                 search_settings.contract_depth = 3;
+                search_settings.max_iterations = 30;
             end
         end
         if timeout == 1
