@@ -22,8 +22,8 @@ function visualize2(X,Y,U)
             plot(X(store_won_customers,1), X(store_won_customers,2), '*', 'MarkerSize', 5); legend_list = [legend_list 'won customers'];
         end
     end
-    plot(Y(:,1), Y(:,2), 'x', 'MarkerSize', 10); legend_list = [legend_list 'competition'];
-    plot(U(:,1), U(:,2), 'o', 'MarkerSize', 10); legend_list = [legend_list 'my stores'];
+    plot(Y(:,1), Y(:,2), 'x', 'MarkerSize', 10, 'LineWidth', 3); legend_list = [legend_list 'competition'];
+    plot(U(:,1), U(:,2), 'o', 'MarkerSize', 10, 'LineWidth', 2); legend_list = [legend_list 'my stores'];
     legend(legend_list);
     xlim([-10 110]);
     ylim([-10 110]);
