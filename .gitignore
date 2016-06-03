@@ -1,14 +1,19 @@
+# ignore the datasets used for the special problem
+# they occupy too much storage (not for version control)
 ECE719_SpecialProblem/*_data_sets*
-DCDCConverter_Ananth/*.mat
-DCDCConverter_Ananth/*.fig
-DCDCConverter_Ananth/*slprj*
-DCDCConverter_Ananth/*_rti1103*
-DCDCConverter_Ananth/*.dsbuildinfo
-DCDCConverter_Ananth/*.map
-DCDCConverter_Ananth/*.ppc
-DCDCConverter_Ananth/*.sdf
-DCDCConverter_Ananth/*.trc
-DCDCConverter_Ananth/*.mex
-DCDCConverter_Ananth/*_usr.c
-DCDCConverter_Ananth/*_usr.mk
-DCDCConverter_Ananth/*.mexw64
+
+# ignore files/folders with certain properties inside all subdirs DCDCConverter_Ananth
+# /**/ makes sure that subdirectories are considered for the pattern match
+DCDCConverter_Ananth/**/*.mat
+DCDCConverter_Ananth/**/*.fig
+DCDCConverter_Ananth/**/slprj/
+DCDCConverter_Ananth/**/*_rti1103/
+DCDCConverter_Ananth/**/*.dsbuildinfo
+DCDCConverter_Ananth/**/*.map
+DCDCConverter_Ananth/**/*.ppc
+DCDCConverter_Ananth/**/*.sdf
+DCDCConverter_Ananth/**/*.trc
+DCDCConverter_Ananth/**/*.mex
+DCDCConverter_Ananth/**/*_usr.c
+DCDCConverter_Ananth/**/*_usr.mk
+DCDCConverter_Ananth/**/*.mexw64
