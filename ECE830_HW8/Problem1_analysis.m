@@ -12,12 +12,23 @@ r_list = round(linspace(10,n1/2,5));
 m_list = round(linspace(1,n1*n2,20));
 mse_list = zeros(length(m_list), length(r_list));
 
+mu_0_list = zeros(size(r_list));
+
 for testcase_i=1
     for j=1:length(r_list)
         r = r_list(j);
         
         U = orth(rand(n1,r));
         V = orth(rand(n2,r));
+        
+        P_U = U * ( (U'*U) \ U' );
+        P_V = V * ( (V'*V) \ V' );
+        mu_0_U = n1/r * max( sqrt( sum((P_U*eye(n1)).^2, 1) ) );
+        mu_0_V = n1/r * max( sqrt( sum((P_V*eye(n2)).^2, 1) ) );
+        mu_0 = max(mu_0_U, mu_0_V);
+        mu_0_list(j) = mu_0;
+        
+        continue;
         
         diag_elements = randi(50, r, 1);
         S = diag( sort(diag_elements, 'descend') );
